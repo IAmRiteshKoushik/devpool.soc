@@ -18,10 +18,10 @@ import (
 )
 
 type GitHubInfo struct {
-	RepoOwner string
-	RepoName  string
-	Type      string
-	Number    int
+	RepoOwner string`json:"repo_owner"`
+	RepoName  string`json:"repo_name"`
+	Type      string`json:"type"`
+	Number    int`json:"number"`
 }
 
 type InstallationTokenResp struct {
@@ -30,10 +30,10 @@ type InstallationTokenResp struct {
 }
 
 const (
-	IssueClaimed = `Alright @%s! Consider yourself officially assigned as of 
-	%s. If you are thinking, "Whoa, hold up, I didn't sign up for this," no 
+	IssueClaimed = `Alright @%s! Consider yourself officially assigned as now. 
+	If you are thinking, "Whoa, hold up, I didn't sign up for this," no 
 	worries, just yell "/unassign" and we can pretend this never happened. But 
-	if you are stickign around, just know your clock for this ticks out on 
+	if you are sticking around, just know your clock for this ticks out on 
 	%s. Don't screw it up :)`
 
 	IssueUnclaimed = `Adios @%s! You are officially off the hook for this 

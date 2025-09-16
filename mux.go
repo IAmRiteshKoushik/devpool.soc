@@ -30,7 +30,7 @@ func (bm *BotMux) Start() {
 		case cash := <-bm.Bounty:
 			ManageBounty(cash.ParticipantUsername, cash.Amount, cash.Action, cash.Url)
 		case badge := <-bm.Achievement:
-			ManageBadge(badge.ParticipantUsername, badge.Type, badge.Url)
+			ManageAchivement(badge.ParticipantUsername, badge.Type, badge.Url)
 		case sol := <-bm.Solution:
 			ManageSolution(sol.ParticipantUsername, sol.Merged, sol.Url)
 		}

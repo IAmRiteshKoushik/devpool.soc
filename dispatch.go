@@ -8,6 +8,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Function that determines the elapse of time 7 days from current time based on
+// UTC.
+func findEnd() string {
+	nowInUTC := time.Now().UTC()
+	future := nowInUTC.AddDate(0, 0, 7)
+	result := future.Format("Monday, January 2, 2006")
+
+	return result
+}
+
 func ManageExtension(username, url string) {
 	comment := fmt.Sprintf(ExtensionGranted, username)
 
@@ -23,16 +33,24 @@ func ManageExtension(username, url string) {
 		return
 	}
 	if err == redis.Nil {
-		token = NewInstallationToken(repoUrl)
+		Log.Warn("Cache miss. Installation token not found. Trying to generate")
+		token, err = NewInstallationToken(url)
+		if err != nil {
+			Log.Error("Failed to obtain new installation-token from GitHub", err)
+			return
+		}
 	}
 	if token == "" {
+		Log.Error("No token returned by GitHub after request",
+			fmt.Errorf("Missing token despite successful GitHub API call"),
+		)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	err = postComment(ctx, token, info.RepoOwner, info.RepoName, info.Number,
-		comment, "pull")
+		comment, info.Type)
 	if err != nil {
 		Log.Error("Failed to post comment on github", err)
 		return
@@ -41,9 +59,10 @@ func ManageExtension(username, url string) {
 }
 
 func ManageIssueClaim(username string, claim bool, url string) {
+	timeout := findEnd()
 	var comment string
 	if claim {
-		comment = fmt.Sprintf(IssueClaimed, username)
+		comment = fmt.Sprintf(IssueClaimed, username, timeout)
 	} else {
 		comment = fmt.Sprintf(IssueUnclaimed, username)
 	}
@@ -60,16 +79,24 @@ func ManageIssueClaim(username string, claim bool, url string) {
 		return
 	}
 	if err == redis.Nil {
-		token = NewInstallationToken(repoUrl)
+		Log.Warn("Cache miss. Installation token not found. Trying to generate")
+		token, err = NewInstallationToken(url)
+		if err != nil {
+			Log.Error("Failed to obtain new installation-token from GitHub", err)
+			return
+		}
 	}
 	if token == "" {
+		Log.Error("No token returned by GitHub after request",
+			fmt.Errorf("Missing token despite successful GitHub API call"),
+		)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	err = postComment(ctx, token, info.RepoOwner, info.RepoName, info.Number,
-		comment, "issues")
+		comment, info.Type)
 	if err != nil {
 		Log.Error("Failed to post comment on github issue", err)
 		return
@@ -97,16 +124,24 @@ func ManageBounty(username string, amt int, action, url string) {
 		return
 	}
 	if err == redis.Nil {
-		token = NewInstallationToken(repoUrl)
+		Log.Warn("Cache miss. Installation token not found. Trying to generate")
+		token, err = NewInstallationToken(url)
+		if err != nil {
+			Log.Error("Failed to obtain new installation-token from GitHub", err)
+			return
+		}
 	}
 	if token == "" {
+		Log.Error("No token returned by GitHub after request",
+			fmt.Errorf("Missing token despite successful GitHub API call"),
+		)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	err = postComment(ctx, token, info.RepoOwner, info.RepoName, info.Number,
-		comment, "issues")
+		comment, info.Type)
 	if err != nil {
 		Log.Error("Failed to post comment on github", err)
 		return
@@ -134,16 +169,24 @@ func ManageSolution(username string, mergeStatus bool, url string) {
 		return
 	}
 	if err == redis.Nil {
-		token = NewInstallationToken(repoUrl)
+		Log.Warn("Cache miss. Installation token not found. Trying to generate")
+		token, err = NewInstallationToken(url)
+		if err != nil {
+			Log.Error("Failed to obtain new installation-token from GitHub", err)
+			return
+		}
 	}
 	if token == "" {
+		Log.Error("No token returned by GitHub after request",
+			fmt.Errorf("Missing token despite successful GitHub API call"),
+		)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	err = postComment(ctx, token, info.RepoOwner, info.RepoName, info.Number,
-		comment, "pull")
+		comment, info.Type)
 	if err != nil {
 		Log.Error("Failed to post comment on github pull-request", err)
 		return
@@ -151,9 +194,9 @@ func ManageSolution(username string, mergeStatus bool, url string) {
 	Log.Info(fmt.Sprintf("Successfully posted comment on github pull-request %s", repoUrl))
 }
 
-func ManageAchivement(username string, a Achievement, url string) {
+func ManageAchivement(username string, aType string, url string) {
 	var comment string
-	switch a.Type {
+	switch aType {
 	case "doc":
 		comment = fmt.Sprintf(DocSubmissions, username)
 	case "test":
@@ -181,16 +224,25 @@ func ManageAchivement(username string, a Achievement, url string) {
 		return
 	}
 	if err == redis.Nil {
-		token = NewInstallationToken(repoUrl)
+		Log.Warn("Cache miss. Installation token not found. Trying to generate")
+		token, err = NewInstallationToken(url)
+		if err != nil {
+			Log.Error("Failed to obtain new installation-token from GitHub", err)
+			return
+		}
 	}
 	if token == "" {
+		Log.Error("No token returned by GitHub after request",
+			fmt.Errorf("Missing token despite successful GitHub API call"),
+		)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
 	err = postComment(ctx, token, info.RepoOwner, info.RepoName, info.Number,
-		comment, "pull")
+		comment, info.Type)
 	if err != nil {
 		Log.Error("Failed to post comment on github", err)
 		return
