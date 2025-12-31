@@ -13,12 +13,6 @@ type BountyAction struct {
 	Action              string `json:"action"`
 }
 
-type Achievement struct {
-	ParticipantUsername string `json:"github_username"`
-	Url                 string `json:"url"`
-	Type                string `json:"type"`
-}
-
 type Solution struct {
 	ParticipantUsername string `json:"github_username"`
 	Url                 string `json:"pull_request_url"`
