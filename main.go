@@ -13,27 +13,32 @@ func main() {
 		log.Fatalf("Failed to initialize Valkey: %v", err)
 	}
 
+	githubService, err := services.NewGithubService()
+	if err != nil {
+		log.Fatalf("Failed to initialize GithubService: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(4)
 
 	go func() {
 		defer wg.Done()
-		services.ConsumeIssueStream()
+		services.ConsumeIssueStream(githubService)
 	}()
 
 	go func() {
 		defer wg.Done()
-		services.ConsumeBountyStream()
+		services.ConsumeBountyStream(githubService)
 	}()
 
 	go func() {
 		defer wg.Done()
-		services.ConsumeSolutionStream()
+		services.ConsumeSolutionStream(githubService)
 	}()
 
 	go func() {
 		defer wg.Done()
-		services.ConsumeAchievementStream()
+		services.ConsumeAchievementStream(githubService)
 	}()
 
 	wg.Wait()
