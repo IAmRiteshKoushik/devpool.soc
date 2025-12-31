@@ -5,31 +5,25 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 
+	"github.com/IAmRiteshKoushik/devpool/cmd"
 	"github.com/google/go-github/v80/github"
 	"golang.org/x/oauth2"
 )
 
-// PostComment posts a comment on a GitHub issue or pull request.
-// It requires a GitHub Personal Access Token with `public_repo` or `repo` scope
-// to be set in the GITHUB_TOKEN environment variable.
-func PostComment(issueURL, body string) (*github.IssueComment, error) {
-	// Get the GitHub token from an environment variable
-	token := os.Getenv("GITHUB_TOKEN")
+type GithubService struct {
+	client *github.Client
+	ctx    context.Context
+}
+
+func NewGithubService(config *cmd.AppConfig) (*GithubService, error) {
+	token := config.GithubToken
 	if token == "" {
 		return nil, fmt.Errorf("GITHUB_TOKEN environment variable not set")
 	}
 
-	// Parse the URL to get owner, repo, and issue number
-	owner, repo, number, err := parseIssueURL(issueURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse issue URL: %w", err)
-	}
-
-	// Create an authenticated GitHub client
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -37,13 +31,25 @@ func PostComment(issueURL, body string) (*github.IssueComment, error) {
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	// Create the comment
+	return &GithubService{
+			client: client,
+			ctx:    ctx,
+		},
+		nil
+}
+
+// Post a comment on an issue or PR
+func (s *GithubService) PostComment(issueURL, body string) (*github.IssueComment, error) {
+	owner, repo, number, err := parseIssueURL(issueURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse issue URL: %w", err)
+	}
+
 	comment := &github.IssueComment{
 		Body: &body,
 	}
 
-	// Post the comment
-	createdComment, _, err := client.Issues.CreateComment(ctx, owner, repo, number, comment)
+	createdComment, _, err := s.client.Issues.CreateComment(s.ctx, owner, repo, number, comment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create comment: %w", err)
 	}
@@ -52,15 +58,45 @@ func PostComment(issueURL, body string) (*github.IssueComment, error) {
 	return createdComment, nil
 }
 
-// parseIssueURL extracts the owner, repository, and issue/PR number from a GitHub URL.
-// It supports both issue and pull request URLs.
+func (s *GithubService) AssignIssue(issueURL string, assignee string) (*github.Issue, error) {
+	owner, repo, number, err := parseIssueURL(issueURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse issue URL: %w", err)
+	}
+
+	assignees := []string{assignee}
+	issue, _, err := s.client.Issues.AddAssignees(s.ctx, owner, repo, number, assignees)
+	if err != nil {
+		return nil, fmt.Errorf("failed to assign users: %w", err)
+	}
+
+	log.Printf("Successfully assigned %v to issue %s#%d", assignee, repo, number)
+	return issue, nil
+}
+
+func (s *GithubService) UnassignIssue(issueURL string, assignee string) (*github.Issue, error) {
+	owner, repo, number, err := parseIssueURL(issueURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse issue URL: %w", err)
+	}
+
+	assignees := []string{assignee}
+	issue, _, err := s.client.Issues.RemoveAssignees(s.ctx, owner, repo, number, assignees)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unassign users: %w", err)
+	}
+
+	log.Printf("Successfully unassigned %v from issue %s#%d", assignee, repo, number)
+	return issue, nil
+}
+
 func parseIssueURL(issueURL string) (owner, repo string, number int, err error) {
 	u, err := url.Parse(issueURL)
 	if err != nil {
 		return "", "", 0, err
 	}
 
-	// Regex to match /owner/repo/(issues|pull)/number
+	// Regex for matching - /owner/repo/(issues|pull)/number
 	re := regexp.MustCompile(`^/([^/]+)/([^/]+)/(?:issues|pull)/(\d+)$`)
 	matches := re.FindStringSubmatch(u.Path)
 
@@ -72,7 +108,6 @@ func parseIssueURL(issueURL string) (owner, repo string, number int, err error) 
 	repo = matches[2]
 	number, err = strconv.Atoi(matches[3])
 	if err != nil {
-		// This should not happen with the regex, but handle it just in case
 		return "", "", 0, fmt.Errorf("invalid issue number: %s", matches[3])
 	}
 
