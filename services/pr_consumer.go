@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func ConsumeSolutionStream() {
+func ConsumeSolutionStream(githubService *GithubService) {
 	ctx := context.Background()
 	streamName := cmd.SolutionMerge
 	groupName := "solution-group"

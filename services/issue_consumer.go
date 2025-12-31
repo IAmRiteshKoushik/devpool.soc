@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func ConsumeIssueStream() {
+func ConsumeIssueStream(githubService *GithubService) {
 	ctx := context.Background()
 	streamName := cmd.IssueClaim
 	groupName := "issue-group"
@@ -57,7 +58,14 @@ func ConsumeIssueStream() {
 
 				log.Printf("Received issue action: %+v", issueAction)
 
-				// TODO: Take appropriate action with the issueAction
+				// Example of using the GithubService to post a comment
+				if issueAction.Url != "" {
+					commentBody := fmt.Sprintf("Hello @%s! Thanks for your interest in this issue. This is an automated message from DevPool.", issueAction.ParticipantUsername)
+					_, err := githubService.PostComment(issueAction.Url, commentBody)
+					if err != nil {
+						log.Printf("Failed to post comment on %s: %v", issueAction.Url, err)
+					}
+				}
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}
