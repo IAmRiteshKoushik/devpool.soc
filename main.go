@@ -9,11 +9,17 @@ import (
 )
 
 func main() {
+	config, err := cmd.NewAppConfig()
+	if err != nil {
+		log.Fatalf("Failed to load app config: %v", err)
+	}
+	cmd.App = config
+
 	if err := cmd.InitValkey(); err != nil {
 		log.Fatalf("Failed to initialize Valkey: %v", err)
 	}
 
-	githubService, err := services.NewGithubService()
+	githubService, err := services.NewGithubService(config)
 	if err != nil {
 		log.Fatalf("Failed to initialize GithubService: %v", err)
 	}
