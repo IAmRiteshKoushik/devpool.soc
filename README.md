@@ -51,11 +51,6 @@ a contributor to be eligible for testing-related achievement badges.
 Use this command to mark a contributor as a helper. Can be used in both issues 
 as well as pull-requests.
 
-### 10. `/extend <day-count> @github-username` - Maintainer ONLY Command
-Use this command to provide an extension of few days to a contributor. This 
-has to be done manually. The contributor can reach out to the maintainer via 
-discussion channels.
-
 ## Development Instructions
 1. Clone the repository
 ```bash
