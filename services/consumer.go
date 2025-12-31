@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"context"
@@ -35,11 +35,6 @@ type Solution struct {
 }
 
 func ReadIssueStream(bm *BotMux) {
-	lastEntry, err := ReadLastEntry("issue")
-	if err != nil {
-		Log.Error("Could not setup read-issue streeam", err)
-		return
-	}
 
 	for {
 		args := &redis.XReadArgs{

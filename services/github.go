@@ -1,27 +1,22 @@
-package main
+package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/IAmRiteshKoushik/devpool/db"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-github/v62/github"
 	"golang.org/x/oauth2"
 )
 
 type GitHubInfo struct {
-	RepoOwner string`json:"repo_owner"`
-	RepoName  string`json:"repo_name"`
-	Type      string`json:"type"`
-	Number    int`json:"number"`
+	RepoOwner string `json:"repo_owner"`
+	RepoName  string `json:"repo_name"`
+	Type      string `json:"type"`
+	Number    int    `json:"number"`
 }
 
 type InstallationTokenResp struct {
@@ -77,7 +72,7 @@ const (
 	up, or I'm telling Cable you need a dial-up.`
 )
 
-func postComment(ctx context.Context, installationToken, owner, repo string,
+func PostComment(ctx context.Context, installationToken, owner, repo string,
 	number int, cmt string, sink string) error {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: installationToken},
@@ -150,85 +145,4 @@ func ParseGitHubURL(rawURL string) (*GitHubInfo, error) {
 		Type:      pathParts[2],
 		Number:    issueNum,
 	}, nil
-}
-
-func NewInstallationToken(repoUrl string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	conn, err := Pool.Acquire(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to get connection from pool: %w", err)
-	}
-	defer conn.Release()
-
-	q := db.New()
-	installationID, err := q.GetInstallationIdQuery(ctx, conn, repoUrl)
-	if err != nil {
-		return "", fmt.Errorf("failed to get installation token from db: %w", err)
-	}
-
-	// Create a JWT token
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256,
-		jwt.RegisteredClaims{
-			Issuer:    fmt.Sprintf("%d", App.AppID),
-			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-60 * time.Second)),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
-		},
-	)
-	jwtString, err := token.SignedString(PrivateKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
-	// Create an API request
-	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens",
-		installationID.Int64)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+jwtString)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to request installation token: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("unexpected status code: %d: %s",
-			resp.StatusCode, string(body))
-	}
-
-	var tokenResp InstallationTokenResp
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	// Re-populate cache in-case is does not exist
-	hash := "repo-token:" + repoUrl
-	value := tokenResp.Token
-	ttl := time.Until(tokenResp.ExpiresAt)
-	if err := Valkey.Set(ctx, hash, value, ttl).Err(); err != nil {
-		// Don't cancel the operation because Redis cache failed
-		Log.Error("failed to store token in cache", err)
-	}
-
-	return tokenResp.Token, nil
-}
-
-func FetchInstallationToken(repoUrl string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	token, err := Valkey.Get(ctx, "repo-token:"+repoUrl).Result()
-	if err != nil {
-		return "", err // Might be Redis.Nil if token does not exist
-	}
-	return token, nil
 }
