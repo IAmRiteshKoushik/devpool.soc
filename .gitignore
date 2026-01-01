@@ -1,3 +1,5 @@
 .env
 key.pem
+*.log
+tmp
 devpool
