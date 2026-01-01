@@ -33,7 +33,7 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	go func() {
 		defer wg.Done()
@@ -48,6 +48,11 @@ func main() {
 	go func() {
 		defer wg.Done()
 		services.ConsumeSolutionStream(githubService)
+	}()
+
+	go func() {
+		defer wg.Done()
+		services.ConsumeAchievementsStream(githubService)
 	}()
 
 	wg.Wait()
