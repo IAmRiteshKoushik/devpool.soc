@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/IAmRiteshKoushik/devpool/cmd"
@@ -20,7 +20,7 @@ func ConsumeBountyStream(githubService *GithubService) {
 	err := cmd.Valkey.XGroupCreateMkStream(ctx, streamName, groupName, "0").Err()
 	if err != nil {
 		if err.Error() != "BUSYGROUP Consumer Group name already exists" {
-			log.Printf("Error creating consumer group: %v", err)
+			cmd.Log.Error("Error creating consumer group", err)
 		}
 	}
 
@@ -35,7 +35,7 @@ func ConsumeBountyStream(githubService *GithubService) {
 		}).Result()
 
 		if err != nil {
-			log.Printf("Error reading from stream %s: %v", streamName, err)
+			cmd.Log.Error(fmt.Sprintf("Error reading from stream %s", streamName), err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -45,19 +45,34 @@ func ConsumeBountyStream(githubService *GithubService) {
 				var bountyAction models.BountyAction
 				jsonData, ok := message.Values["data"].(string)
 				if !ok {
-					log.Printf("Could not find data in message: %v", message.ID)
+					cmd.Log.Warn(fmt.Sprintf("Could not find data in message: %v", message.ID))
 					continue
 				}
 
 				err := json.Unmarshal([]byte(jsonData), &bountyAction)
 				if err != nil {
-					log.Printf("Error unmarshalling bounty action: %v", err)
+					cmd.Log.Error("Error unmarshalling bounty action", err)
 					continue
 				}
 
-				log.Printf("Received bounty action: %+v", bountyAction)
+				cmd.Log.Info(fmt.Sprintf("Received bounty action: %+v", bountyAction))
 
-				// TODO: Take appropriate action with the bountyAction
+				var commentBody string
+				switch bountyAction.Action {
+				case "BOUNTY":
+					commentBody = fmt.Sprintf(cmd.BountyDelivered, bountyAction.ParticipantUsername)
+				case "PENALTY":
+					commentBody = fmt.Sprintf(cmd.PenaltyDelivered, bountyAction.ParticipantUsername)
+				default:
+					cmd.Log.Warn(fmt.Sprintf("Unknown bounty action: %s", bountyAction.Action))
+					cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
+					continue
+				}
+
+				_, err = githubService.PostComment(bountyAction.Url, commentBody)
+				if err != nil {
+					cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", bountyAction.Url), err)
+				}
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}
