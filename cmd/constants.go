@@ -16,7 +16,7 @@ const (
 
 	DocSubmissions = `Someone actually spent time on ... documentation ? Well, you have made the world a slightly less confusion place for now @%s. Hopefully this makes things easier for the poor schmucks.(unlike me, the a 100x dev)`
 
-	HighImpact = `Consider my tiny, shriveled heart officially impressed. Now, go and grab yourself a latte @%s. You have earned it!`
+	HighImpact = `What an IMPACT! Consider my tiny, shriveled heart officially impressed. Now, go and grab yourself a latte @%s. You have earned it!`
 
 	BugReport = `Well, well, @%s been paying attention! A bug, you say? Is it squishy? Does it glow? Anyway, good job finding it! Bug report accepted!`
 
