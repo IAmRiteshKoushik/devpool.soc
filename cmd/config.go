@@ -44,8 +44,6 @@ func (c *AppConfig) Validate() error {
 		v.Field(&c.Environment, v.Required),
 		v.Field(&c.RedisHost, v.Required),
 		v.Field(&c.RedisPort, v.Required, v.Min(1), v.Max(65535)),
-		v.Field(&c.RedisUsername, v.Required),
-		v.Field(&c.RedisPassword, v.Required),
 		v.Field(&c.GithubToken, v.Required),
 	)
 }
