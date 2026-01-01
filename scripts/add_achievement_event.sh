@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Script to add an Achievement event to the Redis stream.
-# Example:
-# scripts/add_achievement_event.sh Nandgopal-R https://github.com/IAmRiteshKoushik/devpool/issues/1 "IMPACT"
+# scripts/add_achievement_event.sh Nandgopal-R https://github.com/IAmRiteshKoushik/jsonite/issues/3 "IMPACT"
 
 if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <username> <url> <type>"
