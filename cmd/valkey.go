@@ -34,7 +34,7 @@ func InitValkey() error {
 		return err
 	}
 	Log.Info(
-		fmt.Sprintf("[INFO]: Health-check successful for Redis. Response: %s", pong),
+		fmt.Sprintf("[INFO]: Health-check successful for Valkey. Response: %s", pong),
 	)
 
 	Valkey = rdb
