@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/IAmRiteshKoushik/devpool/cmd"
@@ -20,7 +20,7 @@ func ConsumeSolutionStream(githubService *GithubService) {
 	err := cmd.Valkey.XGroupCreateMkStream(ctx, streamName, groupName, "0").Err()
 	if err != nil {
 		if err.Error() != "BUSYGROUP Consumer Group name already exists" {
-			log.Printf("Error creating consumer group: %v", err)
+			cmd.Log.Error("Error creating consumer group", err)
 		}
 	}
 
@@ -35,7 +35,7 @@ func ConsumeSolutionStream(githubService *GithubService) {
 		}).Result()
 
 		if err != nil {
-			log.Printf("Error reading from stream %s: %v", streamName, err)
+			cmd.Log.Error(fmt.Sprintf("Error reading from stream %s", streamName), err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -45,19 +45,29 @@ func ConsumeSolutionStream(githubService *GithubService) {
 				var solution models.Solution
 				jsonData, ok := message.Values["data"].(string)
 				if !ok {
-					log.Printf("Could not find data in message: %v", message.ID)
+					cmd.Log.Warn(fmt.Sprintf("Could not find data in message: %v", message.ID))
 					continue
 				}
 
 				err := json.Unmarshal([]byte(jsonData), &solution)
 				if err != nil {
-					log.Printf("Error unmarshalling solution: %v", err)
+					cmd.Log.Error("Error unmarshalling solution", err)
 					continue
 				}
 
-				log.Printf("Received solution: %+v", solution)
+				cmd.Log.Info(fmt.Sprintf("Received solution: %+v", solution))
 
-				// TODO: Take appropriate action with the solution
+				var commentBody string
+				if solution.Merged {
+					commentBody = fmt.Sprintf(cmd.PRMerged, solution.ParticipantUsername)
+				} else {
+					commentBody = fmt.Sprintf(cmd.PROpened, solution.ParticipantUsername)
+				}
+
+				_, err = githubService.PostComment(solution.Url, commentBody)
+				if err != nil {
+					cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", solution.Url), err)
+				}
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}

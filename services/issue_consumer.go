@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/IAmRiteshKoushik/devpool/cmd"
@@ -21,7 +20,7 @@ func ConsumeIssueStream(githubService *GithubService) {
 	err := cmd.Valkey.XGroupCreateMkStream(ctx, streamName, groupName, "0").Err()
 	if err != nil {
 		if err.Error() != "BUSYGROUP Consumer Group name already exists" {
-			log.Printf("Error creating consumer group: %v", err)
+			cmd.Log.Error("Error creating consumer group", err)
 		}
 	}
 
@@ -36,7 +35,7 @@ func ConsumeIssueStream(githubService *GithubService) {
 		}).Result()
 
 		if err != nil {
-			log.Printf("Error reading from stream %s: %v", streamName, err)
+			cmd.Log.Error(fmt.Sprintf("Error reading from stream %s", streamName), err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -46,24 +45,38 @@ func ConsumeIssueStream(githubService *GithubService) {
 				var issueAction models.IssueAction
 				jsonData, ok := message.Values["data"].(string)
 				if !ok {
-					log.Printf("Could not find data in message: %v", message.ID)
+					cmd.Log.Warn(fmt.Sprintf("Could not find data in message: %v", message.ID))
 					continue
 				}
 
 				err := json.Unmarshal([]byte(jsonData), &issueAction)
 				if err != nil {
-					log.Printf("Error unmarshalling issue action: %v", err)
+					cmd.Log.Error("Error unmarshalling issue action", err)
 					continue
 				}
 
-				log.Printf("Received issue action: %+v", issueAction)
+				cmd.Log.Info(fmt.Sprintf("Received issue action: %+v", issueAction))
 
-				// Example of using the GithubService to post a comment
-				if issueAction.Url != "" {
-					commentBody := fmt.Sprintf("Hello @%s! Thanks for your interest in this issue. This is an automated message from DevPool.", issueAction.ParticipantUsername)
+				if issueAction.Claim {
+					deadline := time.Now().Add(8 * 24 * time.Hour).Format("2006-01-02")
+					commentBody := fmt.Sprintf(cmd.IssueClaimed, issueAction.ParticipantUsername, deadline)
 					_, err := githubService.PostComment(issueAction.Url, commentBody)
 					if err != nil {
-						log.Printf("Failed to post comment on %s: %v", issueAction.Url, err)
+						cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", issueAction.Url), err)
+					}
+					_, err = githubService.AssignIssue(issueAction.Url, issueAction.ParticipantUsername)
+					if err != nil {
+						cmd.Log.Error(fmt.Sprintf("Failed to assign issue %s to %s", issueAction.Url, issueAction.ParticipantUsername), err)
+					}
+				} else {
+					commentBody := fmt.Sprintf(cmd.IssueUnclaimed, issueAction.ParticipantUsername)
+					_, err := githubService.PostComment(issueAction.Url, commentBody)
+					if err != nil {
+						cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", issueAction.Url), err)
+					}
+					_, err = githubService.UnassignIssue(issueAction.Url, issueAction.ParticipantUsername)
+					if err != nil {
+						cmd.Log.Error(fmt.Sprintf("Failed to unassign issue %s to %s", issueAction.Url, issueAction.ParticipantUsername), err)
 					}
 				}
 
