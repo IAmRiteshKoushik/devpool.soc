@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"sync"
 
 	"github.com/IAmRiteshKoushik/devpool/cmd"
@@ -15,13 +16,20 @@ func main() {
 	}
 	cmd.App = config
 
+	file, err := os.OpenFile("devpool.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("could not open log file: %v", err)
+	}
+	defer file.Close()
+	cmd.NewLogger(file)
+
 	if err := cmd.InitValkey(); err != nil {
-		log.Fatalf("Failed to initialize Valkey: %v", err)
+		cmd.Log.Fatal("Failed to initialize Valkey", err)
 	}
 
 	githubService, err := services.NewGithubService(config)
 	if err != nil {
-		log.Fatalf("Failed to initialize GithubService: %v", err)
+		cmd.Log.Fatal("Failed to initialize GithubService", err)
 	}
 
 	var wg sync.WaitGroup
