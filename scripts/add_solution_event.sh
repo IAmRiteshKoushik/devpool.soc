@@ -1,11 +1,8 @@
 #!/bin/bash
 
 # Script to add a Solution event to the Redis stream.
-#
-# Usage: ./add_solution_event.sh <username> <pr_url> <true|false>
-#
 # Example:
-# ./add_solution_event.sh IAmRiteshKoushik https://github.com/IAmRiteshKoushik/devpool/pull/1 true
+# scripts/add_solution_event.sh Nandgopal-R https://github.com/IAmRiteshKoushik/jsonite/pull/4 true
 
 if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <username> <pr_url> <true|false>"

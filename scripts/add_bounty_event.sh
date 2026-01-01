@@ -1,11 +1,7 @@
 #!/bin/bash
 
 # Script to add a BountyAction event to the Redis stream.
-#
-# Usage: ./add_bounty_event.sh <username> <amount> <url> <action>
-#
-# Example:
-# ./add_bounty_event.sh IAmRiteshKoushik 100 https://github.com/IAmRiteshKoushik/devpool/issues/1 "add"
+# scripts/add_bounty_event.sh Nandgopal-R 100 https://github.com/IAmRiteshKoushik/devpool/issues/1 "BOUNTY"
 
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 <username> <amount> <url> <action>"
