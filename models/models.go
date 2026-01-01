@@ -18,3 +18,10 @@ type Solution struct {
 	Url                 string `json:"pull_request_url"`
 	Merged              bool   `json:"merged"`
 }
+
+// IMPACT, DOC, BUG, TEST, HELP
+type Achievement struct {
+	ParticipantUsername string `json:"github_username"`
+	Url                 string `json:"url"`
+	Type                string `json:"type"`
+}
