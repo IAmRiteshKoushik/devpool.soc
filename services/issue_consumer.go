@@ -60,24 +60,24 @@ func ConsumeIssueStream(githubService *GithubService) {
 				if issueAction.Claim {
 					deadline := time.Now().Add(8 * 24 * time.Hour).Format("2006-01-02")
 					commentBody := fmt.Sprintf(cmd.IssueClaimed, issueAction.ParticipantUsername, deadline)
-					_, err := githubService.PostComment(issueAction.Url, commentBody)
-					if err != nil {
-						cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", issueAction.Url), err)
-					}
-					_, err = githubService.AssignIssue(issueAction.Url, issueAction.ParticipantUsername)
-					if err != nil {
-						cmd.Log.Error(fmt.Sprintf("Failed to assign issue %s to %s", issueAction.Url, issueAction.ParticipantUsername), err)
-					}
+					withRetry(func() error {
+						_, err := githubService.PostComment(issueAction.Url, commentBody)
+						return err
+					})
+					withRetry(func() error {
+						_, err := githubService.AssignIssue(issueAction.Url, issueAction.ParticipantUsername)
+						return err
+					})
 				} else {
 					commentBody := fmt.Sprintf(cmd.IssueUnclaimed, issueAction.ParticipantUsername)
-					_, err := githubService.PostComment(issueAction.Url, commentBody)
-					if err != nil {
-						cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", issueAction.Url), err)
-					}
-					_, err = githubService.UnassignIssue(issueAction.Url, issueAction.ParticipantUsername)
-					if err != nil {
-						cmd.Log.Error(fmt.Sprintf("Failed to unassign issue %s to %s", issueAction.Url, issueAction.ParticipantUsername), err)
-					}
+					withRetry(func() error {
+						_, err := githubService.PostComment(issueAction.Url, commentBody)
+						return err
+					})
+					withRetry(func() error {
+						_, err := githubService.UnassignIssue(issueAction.Url, issueAction.ParticipantUsername)
+						return err
+					})
 				}
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)

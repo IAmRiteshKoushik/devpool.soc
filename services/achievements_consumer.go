@@ -75,10 +75,10 @@ func ConsumeAchievementsStream(githubService *GithubService) {
 					continue
 				}
 
-				_, err = githubService.PostComment(achievement.Url, commentBody)
-				if err != nil {
-					cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", achievement.Url), err)
-				}
+				withRetry(func() error {
+					_, err := githubService.PostComment(achievement.Url, commentBody)
+					return err
+				})
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}

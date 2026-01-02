@@ -69,10 +69,10 @@ func ConsumeBountyStream(githubService *GithubService) {
 					continue
 				}
 
-				_, err = githubService.PostComment(bountyAction.Url, commentBody)
-				if err != nil {
-					cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", bountyAction.Url), err)
-				}
+				withRetry(func() error {
+					_, err := githubService.PostComment(bountyAction.Url, commentBody)
+					return err
+				})
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}

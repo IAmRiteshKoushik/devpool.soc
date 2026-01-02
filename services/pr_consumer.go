@@ -64,10 +64,10 @@ func ConsumeSolutionStream(githubService *GithubService) {
 					commentBody = fmt.Sprintf(cmd.PROpened, solution.ParticipantUsername)
 				}
 
-				_, err = githubService.PostComment(solution.Url, commentBody)
-				if err != nil {
-					cmd.Log.Error(fmt.Sprintf("Failed to post comment on %s", solution.Url), err)
-				}
+				withRetry(func() error {
+					_, err := githubService.PostComment(solution.Url, commentBody)
+					return err
+				})
 
 				cmd.Valkey.XAck(ctx, streamName, groupName, message.ID)
 			}
