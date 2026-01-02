@@ -4,7 +4,6 @@ go 1.24.2
 
 require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
-	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/google/go-github/v80 v80.0.0
 	github.com/redis/go-redis/v9 v9.10.0
 	github.com/rs/zerolog v1.34.0
